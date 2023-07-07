@@ -1,0 +1,151 @@
+################# Dimensional parameters #######################
+
+# Set the number of particles in the kernal
+variable	neq equal 30 # Should be greater than 25 in 2D and >55 in 3D
+
+# Kernel radius for mass transport in liquid phase
+variable        h equal 1.0/${neq}
+
+# Particle spacing
+variable        dx equal ${h}/4.0
+
+# Kernel radius for diffuse interface (mass transport between liquid and solid, reaction rate)
+variable	d equal 2.0*${dx}
+
+# Domain size
+variable        L_x equal 5.0
+variable        L_y equal 5.0
+
+################# SPH Particle properties #######################
+
+variable 	sph_rho equal 1.0
+variable        sph_mass equal ${sph_rho}*${dx}^2
+variable	sph_mass_thres equal 2*${sph_mass}
+variable	sph_mass_init1 equal ${sph_mass}
+#variable	sph_mass_init1 equal 0.0
+
+# Constant concentration locations
+variable        anode_end equal 0.06
+variable        const_conc equal ${L_y}-0.06
+
+
+# SEI geometry
+#variable	sei_end equal ${anode_end}+5*${dx}
+#variable	sei_b_l1 equal  ${L_x}/3-2*${dx}
+#variable	sei_b_r1 equal  ${L_x}/3+2*${dx}
+#variable	sei_b_l2 equal  2*${L_x}/3-2*${dx}
+#variable	sei_b_r2 equal  2*${L_x}/3+2*${dx}
+################# Diffusion properties #######################
+
+# Diffusion for anions [um2/s]
+variable        sph_DA equal 1.0
+
+# Diffusion fot cations  [um2/s]
+variable        sph_DC equal 1.0
+
+################# Reaction properties ########################
+
+# Initial reaction rate [um/s]
+variable        sph_RC1 equal 1.0e-3/${neq}
+variable        sph_RC2 equal 1.0e-2/${neq}
+#variable        sph_RC3 equal 5.0e-4/${neq}
+################# Damkohler number ############################
+
+# variable 	damk equal ${sph_RC}*(${const_conc_H}-${anode_end})/${sph_uni_DA}
+# print		"Damkohler number: ${damk}"
+
+################# Equilibrium and initial concentrations #######
+
+variable        sph_const_cC equal 0.5
+variable        sph_const_cA equal 0.5
+
+variable	sph_cA_init equal 0.5
+variable	sph_cC_init equal 0.5
+
+# Charging equilibrium concentration
+variable        sph_cCeq_ch equal 1.0/8.0 #${sph_mass}*2.0 
+variable        sph_cAeq_ch equal 1.0/8.0 #${sph_mass}*2.0 #1.0/8.0
+
+variable        sph_cCeq_disch equal 1.0 #${sph_mass}*2.0 
+################# Applied potential ###############################
+
+# Potentials: 4V/0.5mm = 8e-3 V/um, linear from const_conc_H to anode_end 
+
+# Charging potential
+variable        charging_voltage equal 32e-3
+variable        sph_applied_pot_ch equal ${charging_voltage}*(${const_conc}-${anode_end})
+variable        sph_applied_pot_disch equal ${sph_applied_pot_ch}*-1
+################# Mobility properties ##############################
+# Anion mobility
+variable        sph_muA equal 0.5 #change to real
+
+# Cation mobility
+variable        sph_muC equal 0.5
+
+# Concentration to charge [C/L]
+# Faraday constant/(permitivity of water * Avacadros #)
+variable	sph_conc_to_charge equal 1e-6
+
+
+##########################################################################################
+##########################################################################################
+############################ Timestepping and run time ###################################
+##########################################################################################
+##########################################################################################
+
+# Calculate the stable dt based on the parameters
+
+include         settimestep.varRC.lmp
+variable 	dt_Lo equal ${dt_init}
+variable 	dt_Hi equal ${dt_init}
+
+#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
+#!#!#!#!#!#!#!#!#!#!#   options below   #!#!#!#!#!#!#!#!#!#
+#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
+
+# Option 1:
+##########################################################################################
+# Printout frequency is set at a given dt (nfreqSecs) the same with different parameters #
+##########################################################################################
+ 
+# Set the constant dt for printout frequency
+variable          nfreqSecs equal 0.20
+
+# Calculate nfreq based on parameter-controlled dt 
+variable          nfreq_init equal round(${nfreqSecs}/${dt_init})
+#variable          nfreq_Lo equal round(${nfreqSecs}/${dt_Lo})
+#variable          nfreq_Hi equal round(${nfreqSecs}/${dt_Hi})
+
+####################### Choose how to get run time ######################
+# Option 1a
+# Calculate the run time by how many printouts
+#variable          T_init equal 60*${nfreqSecs}+${nfreqSecs}
+#variable	  T_Hi equal ${T_init}
+#variable	  T_Lo equal ${T_init}
+############ OR #########################################################
+# ## Option 1b
+# ## set the runtime 
+ variable          T_init equal 5.0
+#########################################################################
+
+# Calculate the number of timesteps for the run
+variable          nrun_init equal round(${T_init}/${dt_init})
+#variable          nrun_Hi equal round(${T_Hi}/${dt_Hi})
+#variable          nrun_Lo equal round(${T_Lo}/${dt_Lo})
+print             "init running for ${nrun_init} steps"
+print             "creating data init files every ${nfreq_init} steps"
+
+# Option 2:
+# ################################################################################################
+# # Printout frequency is set for a given amount of steps regardless of the different parameters #
+# ################################################################################################
+# #### Caution! If different parameter values are used across runs, timestep will be different ###
+
+# # Set the prinout frequency by step number
+#  variable          nfreq_init equal 1
+
+# # Set the run length by a multiple of printout frequency
+#  variable          nrun_init equal 100*${nfreq_init}
+
+#  print             "init running for ${nrun_init} steps"
+#  print             "creating data init files every ${nfreq_init} steps"
